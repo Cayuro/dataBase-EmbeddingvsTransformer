@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.text.Font?>
+
+<VBox alignment="CENTER" spacing="15" style="-fx-background-color: #1e1e1e;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.vision.gui.RegisterController">
+    <padding>
+        <Insets bottom="40" left="40" right="40" top="40" />
+    </padding>
+
+    <!-- Título -->
+    <Label text="VisionMouse Registro" style="-fx-text-fill: #00ff00; -fx-font-size: 28;" textAlignment="CENTER">
+        <font>
+            <Font name="System Bold" size="28" />
+        </font>
+    </Label>
+
+    <!-- Separador -->
+    <Label style="-fx-text-fill: #444444;" text="━━━━━━━━━━━━━━━━━━━" />
+
+    <!-- Email: fx:id se inyecta en RegisterController.emailField -->
+    <Label text="Email:" style="-fx-text-fill: #ffffff;" />
+    <TextField fx:id="emailField" promptText="tu@email.com" style="-fx-control-inner-background: #2a2a2a; -fx-text-fill: #ffffff; -fx-font-size: 14;" />
+
+    <!-- Nombre: fx:id se inyecta en RegisterController.nombreField -->
+    <Label text="Nombre:" style="-fx-text-fill: #ffffff;" />
+    <TextField fx:id="nombreField" promptText="Tu nombre" style="-fx-control-inner-background: #2a2a2a; -fx-text-fill: #ffffff; -fx-font-size: 14;" />
+
+    <!-- Password principal: RegisterController.passwordField -->
+    <Label text="Contraseña:" style="-fx-text-fill: #ffffff;" />
+    <PasswordField fx:id="passwordField" promptText="••••••••" style="-fx-control-inner-background: #2a2a2a; -fx-text-fill: #ffffff; -fx-font-size: 14;" />
+
+    <!-- Confirmacion de password: RegisterController.confirmPasswordField -->
+    <Label text="Confirmar Contraseña:" style="-fx-text-fill: #ffffff;" />
+    <PasswordField fx:id="confirmPasswordField" promptText="••••••••" style="-fx-control-inner-background: #2a2a2a; -fx-text-fill: #ffffff; -fx-font-size: 14;" />
+
+    <!-- Mensaje de exito/error mostrado por RegisterController.messageLabel -->
+    <Label fx:id="messageLabel" style="-fx-text-fill: #ff6666;" textAlignment="CENTER" wrapText="true" />
+
+    <!-- Botones de accion que llaman metodos @FXML -->
+    <HBox alignment="CENTER" spacing="10">
+        <Button onAction="#handleRegister" style="-fx-padding: 10 30 10 30; -fx-font-size: 14; -fx-background-color: #00ff00; -fx-text-fill: #000000;" text="Registrarse" />
+        <Button onAction="#handleLoginSwitch" style="-fx-padding: 10 30 10 30; -fx-font-size: 14; -fx-background-color: #0088ff; -fx-text-fill: #ffffff;" text="Ya tengo cuenta" />
+    </HBox>
+</VBox>
