@@ -1,95 +1,64 @@
 package com.vision.database;
 
-import com.zaxxer.hikari.HikariConfig;
-import com.zaxxer.hikari.HikariDataSource;
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.Properties;
 
 /**
- * DatabaseConfig - Configuración y pool de conexiones
+ * DatabaseConfig - Configuración de conexión JDBC
  * 
  * ¿QUÉ HACE?:
- *   1. Crea/abre archivo SQLite (vision_mouse.db)
- *   2. Mantiene un "pool" (conjunto) de conexiones reutilizables
- *   3. Evita crear conexión nueva para cada query (lento)
- * 
- * ¿QUE ES HIKARICP?:
- *   - Un administrador de conexiones muy rápido
- *   - En lugar de: query → abre conexión → cierra conexión
- *   - Hace: query → toma conexión del pool → devuelve al pool
+ *   1. Lee configuración desde variables de entorno o propiedades Java.
+ *   2. Expone una conexión JDBC directa cuando se solicita.
+ *   3. Oculta los detalles del motor de BD al resto de la app.
  * 
  * FLUJO:
  *   App inicia → DatabaseConfig.initialize() 
- *             → crea pool de 5 conexiones
+ *             → valida/guarda configuración
  *             → App corre queries
- *             → App cierra → pool cierra
+ *             → App cierra → no hay pool que cerrar
  */
 public class DatabaseConfig {
-    private static HikariDataSource dataSource;
+     private static String jdbcUrl;
+     private static String username;
+     private static String password;
+
+    private static String getConfigValue(String key, String defaultValue) {
+        String systemValue = System.getProperty(key);
+        if (systemValue != null && !systemValue.trim().isEmpty()) {
+            return systemValue.trim();
+        }
+
+        String envValue = System.getenv(key);
+        if (envValue != null && !envValue.trim().isEmpty()) {
+            return envValue.trim();
+        }
+
+        return defaultValue;
+    }
 
     public static synchronized void initialize() throws SQLException {
-        if (dataSource == null) {
-            HikariConfig config = new HikariConfig();
-            
-            // ========== OPCION 1: SQLite (ACTUALMENTE ACTIVO) ==========
-            // QUE: Base de datos embebida (archivo .db)
-            // COMO: Crea archivo vision_mouse.db automáticamente
-            // PARA QUE: Desarrollo y testing
-            config.setJdbcUrl("jdbc:sqlite:vision_mouse.db");
-            
-            // ========== OPCION 2: MySQL (COMENTADO - Descomenta para usar) ==========
-            // QUE: Base de datos cliente-servidor
-            // COMO: Conecta a servidor MySQL en localhost:3306
-            // PARA QUE: Producción, múltiples usuarios
-            // REQUISITOS PREVIOS:
-            //   1. Instalar MySQL Server
-            //   2. Crear base de datos: CREATE DATABASE vision_mouse;
-            //   3. Crear usuario: CREATE USER 'vision_user'@'localhost' IDENTIFIED BY 'password123';
-            //   4. Dar permisos: GRANT ALL PRIVILEGES ON vision_mouse.* TO 'vision_user'@'localhost';
-            //   5. En pom.xml: cambiar sqlite-jdbc por mysql-connector-java
-            //
-            // DESCOMENTA ESTA LINEA PARA ACTIVAR MYSQL:
-            // config.setJdbcUrl("jdbc:mysql://localhost:3306/vision_mouse");
-            // config.setUsername("vision_user");           // Usuario de MySQL
-            // config.setPassword("password123");           // Contraseña de MySQL
-            
-            // ========== OPCION 3: PostgreSQL (COMENTADO - Descomenta para usar) ==========
-            // QUE: Base de datos cliente-servidor avanzada
-            // COMO: Conecta a servidor PostgreSQL en localhost:5432
-            // PARA QUE: Producción grande, datos complejos
-            // REQUISITOS PREVIOS:
-            //   1. Instalar PostgreSQL Server
-            //   2. Crear base de datos: CREATE DATABASE vision_mouse;
-            //   3. Crear usuario: CREATE USER vision_user WITH PASSWORD 'password123';
-            //   4. Dar permisos: GRANT ALL PRIVILEGES ON DATABASE vision_mouse TO vision_user;
-            //   5. En pom.xml: cambiar sqlite-jdbc por postgresql
-            //
-            // DESCOMENTA ESTAS LINEAS PARA ACTIVAR POSTGRESQL:
-            // config.setJdbcUrl("jdbc:postgresql://localhost:5432/vision_mouse");
-            // config.setUsername("vision_user");           // Usuario de PostgreSQL
-            // config.setPassword("password123");           // Contraseña de PostgreSQL
-            
-            // ========== CONFIGURACION DEL POOL (IGUAL PARA TODAS LAS OPCIONES) ==========
-            // Configuración de pool (funciona igual con SQLite, MySQL o PostgreSQL)
-            config.setMaximumPoolSize(5);      // Máximo 5 conexiones simultáneas
-                                               // Si necesita más, espera hasta que se libere
-                                               // AUMENTAR: si tienes más de 5 usuarios simultáneos
-            
-            config.setMinimumIdle(2);          // Mínimo 2 conexiones inactivas
-                                               // Mantiene 2 abiertas incluso sin usar
-                                               // PARA QUE: Primer request es más rápido
-            
-            config.setConnectionTimeout(10000); // Timeout: 10 segundos
-                                                // Si necesita conexión y todas ocupadas,
-                                                // espera máximo 10s antes de error
-                                                // AUMENTAR: si hay muchos usuarios simultáneos
-            
-            config.setIdleTimeout(300000);     // Timeout inactividad: 5 minutos
-                                               // Cierra conexión si no la usas en 5 min
-                                               // PARA QUE: Liberar recursos
-            
-            dataSource = new HikariDataSource(config);
-            System.out.println("✓ Database pool initialized successfully");
+        if (jdbcUrl == null) {
+            String dbType = getConfigValue("DB_TYPE", "sqlite").toLowerCase();
+
+            // QUE: guardamos parámetros de conexión en memoria.
+            // PARA QUE: el resto de la app no conozca credenciales.
+            if (dbType.equals("postgresql") || dbType.equals("postgres")) {
+                jdbcUrl = getConfigValue("DB_URL", "jdbc:postgresql://localhost:5432/vision_mouse");
+                username = getConfigValue("DB_USER", "vision_user");
+                password = getConfigValue("DB_PASSWORD", "password123");
+            } else if (dbType.equals("mysql")) {
+                jdbcUrl = getConfigValue("DB_URL", "jdbc:mysql://localhost:3306/vision_mouse");
+                username = getConfigValue("DB_USER", "vision_user");
+                password = getConfigValue("DB_PASSWORD", "password123");
+            } else {
+                jdbcUrl = getConfigValue("DB_URL", "jdbc:sqlite:vision_mouse.db");
+                username = null;
+                password = null;
+            }
+
+            System.out.println("✓ Database configuration initialized successfully");
         }
     }
 
@@ -101,7 +70,7 @@ public class DatabaseConfig {
      * COMO: lee la propiedad del DataSource ya inicializado.
      */
     public static String getJdbcUrl() {
-        return dataSource != null ? dataSource.getJdbcUrl() : "";
+        return jdbcUrl != null ? jdbcUrl : "";
     }
 
     /**
@@ -112,20 +81,25 @@ public class DatabaseConfig {
     }
 
     public static Connection getConnection() throws SQLException {
-        if (dataSource == null) {
+        if (jdbcUrl == null) {
             throw new SQLException("Database not initialized. Call DatabaseConfig.initialize() first");
         }
-        return dataSource.getConnection();
+
+        if (username != null && password != null) {
+            Properties props = new Properties();
+            props.setProperty("user", username);
+            props.setProperty("password", password);
+            return DriverManager.getConnection(jdbcUrl, props);
+        }
+
+        return DriverManager.getConnection(jdbcUrl);
     }
 
     public static void close() {
-        if (dataSource != null) {
-            dataSource.close();
-            System.out.println("Database connection pool closed");
-        }
+        // No hay pool que cerrar cuando usamos DriverManager directamente.
     }
 
     public static boolean isInitialized() {
-        return dataSource != null;
+        return jdbcUrl != null;
     }
 }
