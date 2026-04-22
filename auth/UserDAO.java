@@ -30,35 +30,33 @@ public class UserDAO {
      * @param email El email a buscar
      * @return User si existe, null si no
      */
-    public static User findByEmail(String email) {
+    public static User findByEmail(String email){
         // QUE: consulta parametrizada para buscar por email.
         // PARA QUE: evitar SQL injection y mejorar legibilidad.
         String query = "SELECT id, email, nombre, password_hash, created_at FROM users WHERE email = ?";
-
         // QUE: abrimos conexion + PreparedStatement.
         // COMO: try-with-resources garantiza cierre automatico.
         try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(query)) {
+             PreparedStatement plutonQuery = conn.prepareStatement(query)) {
 
             // Posicion 1 corresponde al primer '?' de la consulta.
-            pstmt.setString(1, email);
-            ResultSet rs = pstmt.executeQuery();
+            plutonQuery.setString(1, email);
+            ResultSet rs = plutonQuery.executeQuery();
 
             // Si hay fila, mapeamos columnas SQL a objeto User.
             if (rs.next()) {
                 User user = new User();
                 user.setId(rs.getInt("id"));
                 user.setEmail(rs.getString("email"));
-                user.setNombre(rs.getString("nombre"));
+                user.setNombre(rs.getString("nombre")); // que pasa si lo borro
                 user.setPasswordHash(rs.getString("password_hash"));
                 user.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
                 return user;
             }
 
-        } catch (SQLException e) {
-            System.err.println("Error finding user by email: " + e.getMessage());
+        } catch (SQLException error) {
+            System.err.println("Error finding user by email: " + error.getMessage());
         }
-
         return null;
     }
 
@@ -74,15 +72,15 @@ public class UserDAO {
         String query = "INSERT INTO users (email, nombre, password_hash) VALUES (?, ?, ?)";
 
         try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(query)) {
+             PreparedStatement plutonQuery = conn.prepareStatement(query)) {
 
             // Mapeo en orden de placeholders de la consulta.
-            pstmt.setString(1, user.getEmail());
-            pstmt.setString(2, user.getNombre());
-            pstmt.setString(3, user.getPasswordHash());
+            plutonQuery.setString(1, user.getEmail());
+            plutonQuery.setString(2, user.getNombre());
+            plutonQuery.setString(3, user.getPasswordHash());
 
             // executeUpdate retorna numero de filas afectadas.
-            int affectedRows = pstmt.executeUpdate();
+            int affectedRows = plutonQuery.executeUpdate();
             
             if (affectedRows > 0) {
                 System.out.println("User saved: " + user.getEmail());
@@ -108,3 +106,5 @@ public class UserDAO {
         return findByEmail(email) != null;
     }
 }
+
+
